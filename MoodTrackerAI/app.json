@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "MoodTracker AI",
+    "slug": "mood-tracker-ai",
+    "version": "1.0.0",
+    "scheme": "mood-tracker-ai",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#6B73FF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.moodtrackerai.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#6B73FF"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.moodtrackerai.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
