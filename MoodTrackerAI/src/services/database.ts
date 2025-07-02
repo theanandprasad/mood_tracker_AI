@@ -42,6 +42,18 @@ class DatabaseService {
       );
     `);
 
+    // Create AI insights table
+    await this.db.execAsync(`
+      CREATE TABLE IF NOT EXISTS ai_insights (
+        id TEXT PRIMARY KEY,
+        insight_text TEXT NOT NULL,
+        insight_type TEXT NOT NULL,
+        date_range TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE
+      );
+    `);
+
     // Create index for better query performance
     await this.db.execAsync(`
       CREATE INDEX IF NOT EXISTS idx_mood_entries_date ON mood_entries(date);
@@ -189,6 +201,70 @@ class DatabaseService {
     );
 
     return (result as any)?.value || null;
+  }
+
+  async saveAIInsight(insightText: string, insightType: string, dateRange: string): Promise<string> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const id = `insight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = Date.now();
+
+    await this.db.runAsync(
+      'INSERT INTO ai_insights (id, insight_text, insight_type, date_range, created_at, is_read) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, insightText, insightType, dateRange, now, false]
+    );
+
+    return id;
+  }
+
+  async getAIInsights(limit: number = 5): Promise<any[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const result = await this.db.getAllAsync(
+      'SELECT * FROM ai_insights ORDER BY created_at DESC LIMIT ?',
+      [limit]
+    );
+
+    return result.map((row: any) => ({
+      id: row.id,
+      insightText: row.insight_text,
+      insightType: row.insight_type,
+      dateRange: row.date_range,
+      createdAt: row.created_at,
+      isRead: row.is_read === 1,
+    }));
+  }
+
+  async markInsightAsRead(insightId: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    await this.db.runAsync(
+      'UPDATE ai_insights SET is_read = ? WHERE id = ?',
+      [true, insightId]
+    );
+  }
+
+  async getWeeklyMoodData(): Promise<MoodEntry[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const result = await this.db.getAllAsync(
+      'SELECT * FROM mood_entries WHERE created_at >= ? ORDER BY timestamp DESC',
+      [oneWeekAgo]
+    );
+
+    return result.map((row: any) => ({
+      id: row.id,
+      date: row.date,
+      timestamp: row.timestamp,
+      emoji: row.emoji,
+      moodType: row.mood_type,
+      intensity: row.intensity,
+      note: row.note,
+      tags: JSON.parse(row.tags || '[]'),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
   }
 }
 

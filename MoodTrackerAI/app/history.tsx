@@ -13,6 +13,7 @@ import { useMoodData, useMoodStats } from '../src/hooks/useMoodData';
 import { getIntensityColor } from '../src/constants/moods';
 import { MoodEntry, ViewMode } from '../src/types';
 import { formatDateForDisplay } from '../src/utils/dateUtils';
+import { CalendarView } from '../src/components/CalendarView';
 
 export default function HistoryScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -59,14 +60,18 @@ export default function HistoryScreen() {
     </View>
   );
 
+  const handleDatePress = (date: string, entry?: MoodEntry) => {
+    if (entry) {
+      // Could show a detailed view or edit modal here
+      console.log('Date pressed:', date, entry);
+    }
+  };
+
   const renderCalendarView = () => (
-    <View style={styles.calendarContainer}>
-      <Text style={styles.calendarTitle}>Calendar View</Text>
-      <Text style={styles.comingSoon}>Coming Soon! 📅</Text>
-      <Text style={styles.comingSoonDesc}>
-        Calendar view will show your mood history in a beautiful monthly grid format.
-      </Text>
-    </View>
+    <CalendarView 
+      moodEntries={moodEntries} 
+      onDatePress={handleDatePress}
+    />
   );
 
   return (
@@ -313,27 +318,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B73FF',
     fontWeight: '500',
-  },
-  calendarContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  calendarTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2C2C2C',
-    marginBottom: 16,
-  },
-  comingSoon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  comingSoonDesc: {
-    fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
-    lineHeight: 24,
   },
 }); 

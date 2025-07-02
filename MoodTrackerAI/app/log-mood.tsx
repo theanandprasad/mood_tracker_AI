@@ -15,6 +15,7 @@ import Slider from '@react-native-community/slider';
 import { MOOD_OPTIONS, ACTIVITY_TAGS } from '../src/constants/moods';
 import { MoodOption } from '../src/types';
 import { useMoodData } from '../src/hooks/useMoodData';
+import { MoodValidation, ErrorHandler } from '../src/utils/validation';
 
 export default function LogMoodScreen() {
   const [selectedMood, setSelectedMood] = useState<MoodOption | null>(null);
@@ -34,22 +35,37 @@ export default function LogMoodScreen() {
   };
 
   const handleSaveMood = async () => {
-    if (!selectedMood) {
-      Alert.alert('Please select a mood', 'You need to choose an emoji that represents how you feel.');
-      return;
-    }
-
     setIsSaving(true);
 
     try {
+      // Validate the mood entry
+      const validationData = {
+        emoji: selectedMood?.emoji,
+        moodType: selectedMood?.type,
+        intensity,
+        note: note.trim(),
+        tags: selectedTags,
+      };
+
+      const validation = MoodValidation.validateMoodEntry(validationData);
+      
+      if (!validation.isValid) {
+        Alert.alert(
+          'Validation Error', 
+          validation.errors.join('\n'),
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       const now = new Date();
       const moodEntry = {
         date: now.toISOString().split('T')[0], // YYYY-MM-DD format
         timestamp: now.getTime(),
-        emoji: selectedMood.emoji,
-        moodType: selectedMood.type,
+        emoji: selectedMood!.emoji,
+        moodType: selectedMood!.type,
         intensity,
-        note: note.trim() || undefined,
+        note: MoodValidation.sanitizeNote(note) || undefined,
         tags: selectedTags,
       };
 
@@ -66,9 +82,10 @@ export default function LogMoodScreen() {
         ]
       );
     } catch (error) {
+      const errorMessage = ErrorHandler.handleDatabaseError(error);
       Alert.alert(
         'Error', 
-        'Failed to save your mood. Please try again.',
+        errorMessage,
         [{ text: 'OK' }]
       );
     } finally {

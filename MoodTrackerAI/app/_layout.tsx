@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, StyleSheet } from 'react-native';
 import { databaseService } from '../src/services/database';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 export default function RootLayout() {
   const [isDbReady, setIsDbReady] = useState(false);
@@ -34,7 +35,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <StatusBar style="dark" backgroundColor="#FAFAFA" />
       <Stack
         screenOptions={{
@@ -68,8 +69,14 @@ export default function RootLayout() {
             title: 'Mood History',
           }}
         />
+        <Stack.Screen
+          name="ai-insights"
+          options={{
+            title: 'AI Insights',
+          }}
+        />
       </Stack>
-    </>
+    </ErrorBoundary>
   );
 }
 

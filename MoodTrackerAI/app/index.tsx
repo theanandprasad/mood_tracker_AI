@@ -7,17 +7,20 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useMoodData, useMoodStats } from '../src/hooks/useMoodData';
+import { useAIInsights } from '../src/hooks/useAIInsights';
 import { MoodEntry } from '../src/types';
 
 export default function HomeScreen() {
   const [todaysMood, setTodaysMood] = useState<MoodEntry | null>(null);
   const [yesterdaysMood, setYesterdaysMood] = useState<MoodEntry | null>(null);
+  const [currentInsight, setCurrentInsight] = useState<string | null>(null);
   
   const { getTodaysMood, moodEntries } = useMoodData();
   const { stats, loading: statsLoading } = useMoodStats();
+  const { insights, generateNewInsights, getLatestInsight, shouldGenerateNewInsights } = useAIInsights();
   
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -38,6 +41,21 @@ export default function HomeScreen() {
         const yesterdayStr = yesterday.toISOString().split('T')[0];
         const yesterdayEntry = moodEntries.find(entry => entry.date === yesterdayStr);
         setYesterdaysMood(yesterdayEntry || null);
+      }
+
+      // Load and potentially generate AI insights
+      const latestInsight = await getLatestInsight();
+      setCurrentInsight(latestInsight);
+
+      // Generate new insights if needed (once per day)
+      if (shouldGenerateNewInsights() && moodEntries.length >= 3) {
+        try {
+          await generateNewInsights();
+          const newInsight = await getLatestInsight();
+          setCurrentInsight(newInsight);
+        } catch (error) {
+          console.log('Failed to generate new insights:', error);
+        }
       }
     };
     
@@ -66,23 +84,22 @@ export default function HomeScreen() {
 
         {/* Main Action Button */}
         <View style={styles.actionContainer}>
-          <Link href="/log-mood" asChild>
-            <TouchableOpacity
-              style={[
-                styles.logButton,
-                hasMoodToday && styles.logButtonComplete
-              ]}
-            >
-              <MaterialIcons
-                name={hasMoodToday ? "check-circle" : "add-circle"}
-                size={32}
-                color="#FFFFFF"
-              />
-              <Text style={styles.logButtonText}>
-                {hasMoodToday ? "Mood Logged Today" : "Log Today's Mood"}
-              </Text>
-            </TouchableOpacity>
-          </Link>
+          <TouchableOpacity
+            style={[
+              styles.logButton,
+              hasMoodToday && styles.logButtonComplete
+            ]}
+            onPress={() => router.push('/log-mood')}
+          >
+            <MaterialIcons
+              name={hasMoodToday ? "check-circle" : "add-circle"}
+              size={32}
+              color="#FFFFFF"
+            />
+            <Text style={[styles.logButtonText, { color: '#FFFFFF' }]}>
+              {hasMoodToday ? "Mood Logged Today" : "Log Today's Mood"}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Quick Actions */}
@@ -94,10 +111,12 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </Link>
 
-          <TouchableOpacity style={styles.quickActionButton}>
-            <MaterialIcons name="insights" size={24} color="#6B73FF" />
-            <Text style={styles.quickActionText}>AI Insights</Text>
-          </TouchableOpacity>
+          <Link href="/ai-insights" asChild>
+            <TouchableOpacity style={styles.quickActionButton}>
+              <MaterialIcons name="psychology" size={24} color="#6B73FF" />
+              <Text style={styles.quickActionText}>AI Insights</Text>
+            </TouchableOpacity>
+          </Link>
         </View>
 
         {/* Recent Mood */}
@@ -120,16 +139,18 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* AI Insight Preview (Mock) */}
-        <View style={styles.insightContainer}>
-          <Text style={styles.sectionTitle}>Weekly Insight</Text>
-          <View style={styles.insightCard}>
-            <MaterialIcons name="psychology" size={20} color="#6B73FF" />
-            <Text style={styles.insightText}>
-              You've felt energetic 3 days in a row! 💪
-            </Text>
+        {/* AI Insight Preview */}
+        {currentInsight && (
+          <View style={styles.insightContainer}>
+            <Text style={styles.sectionTitle}>AI Insight</Text>
+            <View style={styles.insightCard}>
+              <MaterialIcons name="psychology" size={20} color="#6B73FF" />
+              <Text style={styles.insightText}>
+                {currentInsight}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -143,11 +164,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 60,
     paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
+    marginTop: 20,
     marginBottom: 30,
   },
   title: {
@@ -200,6 +222,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 30,
     borderRadius: 20,
+    minHeight: 60,
     shadowColor: '#6B73FF',
     shadowOffset: {
       width: 0,
@@ -217,6 +240,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginLeft: 12,
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   quickActions: {
     flexDirection: 'row',
